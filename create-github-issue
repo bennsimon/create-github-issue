@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+run() {
+  PREV_IFS=$IFS
+  IFS=","
+  label_str=""
+  author=""
+  queryLabels=""
+  GH_ISSUE_LABELS="${GH_ISSUE_LABELS:-}"
+  GH_ISSUE_AUTHOR="${GH_ISSUE_AUTHOR:-}"
+  GH_ISSUE_TITLE="${GH_ISSUE_TITLE:-}"
+  GH_ISSUE_BODY_EXT="${GH_ISSUE_BODY_EXT:-}"
+
+  if [[ -n "$GH_ISSUE_LABELS" ]]; then
+    queryLabels=$(for label in $GH_ISSUE_LABELS; do label_str=$label_str"label:\"$label\" "; done && echo "${label_str::-1}")
+  fi
+  if [[ -n "$GH_ISSUE_AUTHOR" ]]; then
+    author="author:$GH_ISSUE_AUTHOR"
+  fi
+  query=$(printf %s "$(echo "$GH_ISSUE_TITLE is:open repo:$GH_ISSUE_REPO $author $queryLabels" | xargs)" | jq -rRs @uri)
+
+  response=$(curl \
+    -H 'Accept: application/vnd.github.text-match+json' \
+    -H 'Authorization: Bearer '"$GH_TOKEN"'' \
+    --url "https://api.github.com/search/issues?q=$query")
+
+  totalCount=$(echo "$response" | jq '.total_count')
+
+  if [[ $totalCount -ge 1 ]]; then
+    echo "Issue Already Exists"
+  elif [[ $totalCount == "null" ]]; then
+    exit 1
+  else
+    echo "Creating issue"
+    curl --request POST \
+      --url "https://api.github.com/repos/$GH_ISSUE_REPO/issues" \
+      --header 'authorization: Bearer '"$GH_TOKEN"'' \
+      --header 'content-type: application/json' \
+      --data '{
+        "title": "'"$GH_ISSUE_TITLE"'",
+        "labels": ['"$(for label in $GH_ISSUE_LABELS; do label_str=$label_str\""$label"\",; done && echo "${label_str::-1}")"'],
+        "body": "'"$GH_ISSUE_BODY\r\n$GH_ISSUE_BODY_EXT"'"
+      }'
+
+  fi
+  IFS=$PREV_IFS
+}
+
+run
