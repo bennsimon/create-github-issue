@@ -18,7 +18,8 @@ run() {
   if [[ -n "$GH_ISSUE_AUTHOR" ]]; then
     author="author:$GH_ISSUE_AUTHOR"
   fi
-  query=$(printf %s "$(echo "$GH_ISSUE_TITLE is:open repo:$GH_ISSUE_REPO $author $queryLabels" | xargs)" | jq -rRs @uri)
+
+  query=$(printf %s "$GH_ISSUE_TITLE is:open repo:$GH_ISSUE_REPO $author $queryLabels" | jq -rRs @uri)
 
   response=$(curl \
     -H 'Accept: application/vnd.github.text-match+json' \
