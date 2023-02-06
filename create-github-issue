@@ -16,10 +16,10 @@ run() {
     queryLabels=$(for label in $GH_ISSUE_LABELS; do label_str=$label_str"label:\"$label\" "; done && echo "${label_str::-1}")
   fi
   if [[ -n "$GH_ISSUE_AUTHOR" ]]; then
-    author="author:$GH_ISSUE_AUTHOR"
+    author="author:$GH_ISSUE_AUTHOR "
   fi
 
-  query=$(printf %s "$GH_ISSUE_TITLE is:open repo:$GH_ISSUE_REPO $author $queryLabels" | jq -rRs @uri)
+  query=$(printf %s "$GH_ISSUE_TITLE is:open repo:$GH_ISSUE_REPO $author$queryLabels" | jq -rRs @uri)
 
   response=$(curl \
     -H 'Accept: application/vnd.github.text-match+json' \
@@ -31,6 +31,7 @@ run() {
   if [[ $totalCount -ge 1 ]]; then
     echo "Issue Already Exists"
   elif [[ $totalCount == "null" ]]; then
+    echo "$response"
     exit 1
   else
     echo "Creating issue"
